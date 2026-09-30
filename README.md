@@ -22,6 +22,11 @@
 xHC expands the residual state to N=16 streams, reads all streams, and sparsely updates only k=4 active streams.
 </em></p>
 
+## News
+
+- **2026.09** 🎉 xHC has been accepted to **NeurIPS 2026**!
+- **2026.07** We released the [xHC technical report](https://arxiv.org/abs/2607.14530) on arXiv.
+
 ## Overview
 
 Hyper-Connections (HC) expand the Transformer residual stream into $N$ parallel streams, introducing a memory-scaling axis complementary to model width and depth. Manifold-Constrained Hyper-Connections (mHC) stabilize this formulation at scale, but existing HC-family methods typically stop at $N=4$.
