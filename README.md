@@ -55,6 +55,23 @@ xHC combines two complementary designs:
 
 For practical deployment, **xHC-Flash** shares full-state operations across consecutive sublayers and reconstructs later sublayer inputs with lightweight corrections. It substantially reduces memory traffic while preserving nearly all of the performance gains of full xHC.
 
+## Usage
+
+### Quickstart
+
+```python
+import torch
+from xhc import xHCModel, xHCConfig
+
+# Initialize with default configuration (N=16, k=4)
+config = xHCConfig()
+model = xHCModel(config)
+
+# Forward pass
+inputs = torch.randint(0, config.vocab_size, (1, 128))
+outputs = model(input_ids=inputs)
+```
+
 <a id="results"></a>
 ## Results
 
