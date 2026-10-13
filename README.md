@@ -162,6 +162,25 @@ In `configs/runtime.env`, set `DATA_ARGS=/workspace/configs/data_mixture.json`
 and `TOKENIZER_DIR=/tokenizer`. Preprocess the data with the same tokenizer used
 for training. Data and tokenizer files are supplied separately.
 
+#### Open-source data setup
+
+For public-data experiments, use [Dolma3](https://huggingface.co/datasets/allenai/dolma3_mix-150B-1025)
+with the [Qwen2 tokenizer](https://huggingface.co/Qwen/Qwen2-0.5B).
+**This public dataset differs from the private training data used in the paper.**
+Run inside the training container:
+
+```bash
+pip install zstandard
+python scripts/prepare_dolma3.py --output data/dolma3 --workers 16
+export DATA_ARGS="$PWD/data/dolma3/data_args.json"
+export TOKENIZER_DIR="$PWD/data/dolma3/tokenizer"
+```
+
+The script downloads the pinned public snapshot (about 111 GB compressed), appends
+EOS to each document, and builds deterministic train/validation/test indices and
+the data mixture. Re-running resumes completed groups. Use the same prepared data
+for all model variants; preparation uses CPUs and needs no GPU.
+
 ### 3. Launch training
 
 Choose one script from `scripts/`:
@@ -176,10 +195,10 @@ Choose one script from `scripts/`:
 bash scripts/train_10B_xHC_efficient.sh
 ```
 
-For 32-GPU training, run the same command on each of eight allocated 4-GPU nodes:
+For 32-GPU training, run the same command on each of four allocated 8-GPU nodes:
 
 ```bash
-export NNODES=8 GPUS=4 NODE_RANK=0  # Set NODE_RANK=0..7 on the respective nodes.
+export NNODES=4 GPUS=8 NODE_RANK=0  # Set NODE_RANK=0..3 on the respective nodes.
 export MASTER_ADDR=192.0.2.10 MASTER_PORT=29500  # Replace with node 0's IP.
 export EXP_NAME=10B_xHC_efficient
 bash scripts/train_10B_xHC_efficient.sh

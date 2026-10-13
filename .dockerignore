@@ -16,3 +16,6 @@ configs/runtime.env
 configs/data_mixture.json
 Megatron-LM/core
 **/core.[0-9]*
+
+# Locally downloaded public datasets
+/data/

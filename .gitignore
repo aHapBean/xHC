@@ -15,3 +15,6 @@ configs/data_mixture.json
 # Runtime crash dumps (not the megatron/core source directory).
 /Megatron-LM/core
 core.[0-9]*
+
+# Locally downloaded public datasets
+/data/
