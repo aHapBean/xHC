@@ -32,6 +32,9 @@ def gpt_builder(args, pre_process, post_process, vp_stage=None, config=None, pg_
             config = core_transformer_config_from_yaml(args, "language_model")
         else:
             config = core_transformer_config_from_args(args)
+    if config.hyper_connection != 'baseline':
+        if args.use_legacy_models or args.spec is not None or args.experimental_attention_variant is not None or args.heterogeneous_layers_config_path is not None:
+            raise ValueError('Native HC requires the standard MCore GPT builder without a custom spec')
     if args.use_legacy_models:
         model = megatron.legacy.model.GPTModel(
             config,
@@ -52,7 +55,7 @@ def gpt_builder(args, pre_process, post_process, vp_stage=None, config=None, pg_
                         config=config, vp_stage=vp_stage
                     )
                 )
-            elif args.num_experts:
+            elif args.num_experts or config.hyper_connection != 'baseline':
                 assert not (config.transformer_impl == "inference_optimized")
                 # Define the decoder block spec
                 transformer_layer_spec = get_gpt_decoder_block_spec(

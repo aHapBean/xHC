@@ -596,6 +596,11 @@ def get_gpt_decoder_layer_specs(
             f"Invalid moe_layer_freq: {type(config.moe_layer_freq)}, {config.moe_layer_freq}"
         )
 
+    if config.hyper_connection != 'baseline':
+        from megatron.core.transformer.hyper_connection_layer import HyperConnectionLayer
+        dense_layer_spec.module = HyperConnectionLayer
+        moe_layer_spec.module = HyperConnectionLayer
+
     # Create the layer specs for the model.
     layer_specs = []
     for layer_number in range(config.num_layers):

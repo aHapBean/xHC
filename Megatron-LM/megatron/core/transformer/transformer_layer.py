@@ -11,7 +11,7 @@ import torch
 import torch.distributed
 from torch import Tensor
 
-from megatron.core import parallel_state, tensor_parallel
+from megatron.core import parallel_state, tensor_parallel, activation_stats
 from megatron.core.dist_checkpointing.mapping import ShardedStateDict
 from megatron.core.dist_checkpointing.utils import apply_prefix_mapping
 from megatron.core.packed_seq_params import PackedSeqParams
@@ -572,6 +572,7 @@ class TransformerLayer(GraphableMegatronModule, BaseTransformerLayer):
         # Residual connection.
         residual = hidden_states
 
+        activation_stats.record('attn_input', self.layer_number, hidden_states)
         # Optional Input Layer norm
         if self.recompute_input_layernorm:
             self.input_layernorm_checkpoint = tensor_parallel.CheckpointWithoutOutput()
@@ -607,6 +608,7 @@ class TransformerLayer(GraphableMegatronModule, BaseTransformerLayer):
             sequence_len_offset=sequence_len_offset,
         )
         nvtx_range_pop(suffix="self_attention")
+        activation_stats.record('attn_output', self.layer_number, attention_output_with_bias[0])
 
         if self.recompute_input_layernorm:
             # discard the output of the input layernorm and register the recompute
@@ -629,6 +631,7 @@ class TransformerLayer(GraphableMegatronModule, BaseTransformerLayer):
                     attention_output_with_bias, residual, self.hidden_dropout
                 )
         nvtx_range_pop(suffix="self_attn_bda")
+        activation_stats.record('post_attn_residual_output', self.layer_number, hidden_states)
 
         # Delay the offload of the attention norm until after the self_attn_bda has been computed
         # because the residual is needed in the self_attn_bda.
@@ -700,6 +703,7 @@ class TransformerLayer(GraphableMegatronModule, BaseTransformerLayer):
         residual = hidden_states
 
         # Optional Layer norm post the cross-attention.
+        activation_stats.record('mlp_input', self.layer_number, hidden_states)
         pre_mlp_layernorm_output = self._forward_pre_mlp_layernorm(hidden_states)
 
         nvtx_range_push(suffix="mlp")
@@ -756,6 +760,7 @@ class TransformerLayer(GraphableMegatronModule, BaseTransformerLayer):
             mlp_output_with_bias = self.mlp(pre_mlp_layernorm_output, padding_mask=padding_mask)
 
         nvtx_range_pop(suffix="mlp")
+        activation_stats.record('mlp_output', self.layer_number, mlp_output_with_bias[0])
 
         if (
             self.is_moe_layer
@@ -815,6 +820,7 @@ class TransformerLayer(GraphableMegatronModule, BaseTransformerLayer):
                     mlp_output_with_bias, residual, self.hidden_dropout
                 )
         nvtx_range_pop(suffix="mlp_bda")
+        activation_stats.record('post_mlp_residual_output', self.layer_number, hidden_states)
         # Delay the offload of the mlp norm until after the mlp_bda has been computed
         # because the residual is needed in the mlp_bda.
         if self.offload_mlp_norm:

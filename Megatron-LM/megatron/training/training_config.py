@@ -7,6 +7,12 @@ from typing import Literal
 class TrainingConfig:
     """Configuration settings related to the training loop."""
 
+    global_token_mean_loss: bool = False
+    """Normalize GPT CE across DP valid tokens; requires one microbatch, TP=PP=CP=1. Keeps MoE auxiliary scaling unchanged."""
+
+    lr_step_before_optimizer: bool = False
+    """Advance the scheduler before the update, rolling it back if the update is skipped."""
+
     micro_batch_size: int | None = None
     """Batch size per model instance (local batch size). Global batch size is local batch size times
     data parallel size times number of micro batches."""
@@ -124,7 +130,7 @@ class SchedulerConfig:
     lr_decay_style: Literal["constant", "linear", "cosine", "inverse-square-root", "WSD"] = "linear"
     """Learning rate decay function."""
 
-    lr_wsd_decay_style: Literal["exponential", "linear", "cosine", "minus_sqrt"] = "exponential"
+    lr_wsd_decay_style: Literal["exponential", "linear", "cosine", "minus_sqrt", "geometric"] = "exponential"
     """Decay style for the annealing phase of WSD"""
 
     lr_decay_iters: int | None = None

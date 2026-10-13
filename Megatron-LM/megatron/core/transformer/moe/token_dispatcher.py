@@ -401,7 +401,8 @@ class MoEAlltoAllTokenDispatcher(MoETokenDispatcher):
         # [tp_size]. Represents the number of tokens received by the current rank from
         # other TP ranks.
         self.output_splits_tp = None
-        self.permute_idx_device = torch.device("cuda") if self.config.moe_permute_fusion else "cpu"
+        self.chunk_sort_fusion = self.config.moe_permute_fusion and self.config.moe_chunk_sort_fusion
+        self.permute_idx_device = torch.device("cuda") if self.chunk_sort_fusion else "cpu"
         input_chunk_idxs = torch.arange(
             self.num_experts * self.tp_size, device=self.permute_idx_device
         )
@@ -578,7 +579,7 @@ class MoEAlltoAllTokenDispatcher(MoETokenDispatcher):
             self.num_global_tokens_per_local_expert = num_global_tokens_per_local_expert.view(
                 -1, self.num_local_experts
             )
-            if not self.config.moe_permute_fusion:
+            if not self.chunk_sort_fusion:
                 # A synchronization is needed before permutation 2
                 # to get the `num_global_tokens_per_local_expert` CPU value.
                 self._maybe_update_cuda_sync_point("before_permutation_2")
@@ -734,7 +735,7 @@ class MoEAlltoAllTokenDispatcher(MoETokenDispatcher):
                     self.num_global_tokens_per_local_expert.ravel(),
                     self.sort_input_by_local_experts,
                     probs=global_probs,
-                    fused=self.config.moe_permute_fusion,
+                    fused=self.chunk_sort_fusion,
                 )
 
         tokens_per_expert = self._maybe_dtoh_and_synchronize(
@@ -768,7 +769,7 @@ class MoEAlltoAllTokenDispatcher(MoETokenDispatcher):
                     hidden_states,
                     self.num_global_tokens_per_local_expert.T.ravel(),
                     self.restore_output_by_local_experts,
-                    fused=self.config.moe_permute_fusion,
+                    fused=self.chunk_sort_fusion,
                 )
 
         if self.tp_size > 1:
@@ -888,7 +889,7 @@ class MoEAlltoAllTokenDispatcher(MoETokenDispatcher):
                     self.num_out_tokens = maybe_move_tensor_to_cpu(
                         self.num_out_tokens, record_stream=on_side_stream
                     )
-                    if self.num_local_experts > 1 and not self.config.moe_permute_fusion:
+                    if self.num_local_experts > 1 and not self.chunk_sort_fusion:
                         self.num_global_tokens_per_local_expert = maybe_move_tensor_to_cpu(
                             self.num_global_tokens_per_local_expert, record_stream=on_side_stream
                         )
@@ -991,7 +992,7 @@ class _HybridEPManager(_DispatchManager):
         # Handle used for combine operation
         self.handle = None
         # Used for padding the output for each expert
-        self.pad_multiple = None
+        self.pad_multiple = config.moe_hybridep_pad_multiple
 
         if hybrid_ep_dispatch is None:
             raise ImportError(

@@ -383,6 +383,20 @@ class HybridEPDispatch(torch.autograd.Function):
             non_blocking=non_blocking,
         )
 
+        # Blocking dispatch returns a pinned CPU token count in handle[3].
+        # HybridEP's asynchronous unpermute reads that pointer directly, without
+        # registering its use with the pinned allocator. During checkpoint's
+        # no-grad forward the handle can die before the kernel finishes, letting
+        # another host allocation overwrite the count. Keep the cached count on
+        # CUDA instead. The nonblocking copy records the source allocation's
+        # lifetime; subsequent GPU uses are ordered on the current stream.
+        if handle[3].device.type == "cpu":
+            handle = (
+                *handle[:3],
+                handle[3].to(device=x.device, non_blocking=True),
+                *handle[4:],
+            )
+
         ctx.handle = handle
         ctx.pad_multiple = pad_multiple
         return (

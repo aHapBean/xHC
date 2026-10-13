@@ -159,6 +159,9 @@ class OptimizerParamScheduler:
         self.lr_decay_style = lr_decay_style
         if self.lr_decay_style == "WSD":
             assert self.wsd_decay_steps is not None
+            if self.lr_wsd_decay_style == "geometric":
+                if not (0 < self.min_lr <= self.max_lr):
+                    raise ValueError('Geometric WSD requires positive learning-rate endpoints')
 
         self.start_wd = start_wd
         self.end_wd = end_wd
@@ -269,6 +272,10 @@ class OptimizerParamScheduler:
                     coeff = 0.5 * (math.cos(math.pi * wsd_decay_ratio) + 1.0)
                 elif self.lr_wsd_decay_style == "exponential":
                     coeff = (2.0 * math.pow(0.5, wsd_decay_ratio)) - 1.0
+                elif self.lr_wsd_decay_style == "geometric":
+                    if not (0 < min_lr <= max_lr):
+                        raise ValueError('Geometric WSD requires positive learning-rate endpoints')
+                    return max_lr * math.pow(min_lr / max_lr, wsd_decay_ratio)
                 elif self.lr_wsd_decay_style == "minus_sqrt":
                     coeff = 1.0 - math.sqrt(wsd_decay_ratio)
 
@@ -301,6 +308,8 @@ class OptimizerParamScheduler:
             'num_steps': self.num_steps,
             'lr_decay_style': self.lr_decay_style,
             'lr_decay_steps': self.lr_decay_steps,
+            'wsd_decay_steps': self.wsd_decay_steps,
+            'lr_wsd_decay_style': self.lr_wsd_decay_style,
             'min_lr': self.min_lr,
             'start_wd': self.start_wd,
             'end_wd': self.end_wd,
@@ -376,6 +385,10 @@ class OptimizerParamScheduler:
         self.lr_decay_style = self._check_and_set(
             self.lr_decay_style, lr_decay_style_, 'learning rate decay style'
         )
+        # Older checkpoints did not serialize these fields; keep CLI values for those.
+        for name in ('wsd_decay_steps', 'lr_wsd_decay_style'):
+            if name in state_dict:
+                setattr(self, name, self._check_and_set(getattr(self, name), state_dict[name], name))
 
         if 'num_iters' in state_dict:
             num_steps = state_dict['num_iters']

@@ -7,7 +7,7 @@ from typing import Callable, Iterator, List, Optional, Union
 import torch
 from torch.autograd.variable import Variable
 
-from megatron.core import parallel_state
+from megatron.core import parallel_state, activation_stats
 from megatron.core.enums import ModelType
 from megatron.core.pipeline_parallel.fine_grained_activation_offload import (
     FineGrainedActivationOffloadingInterface as off_interface,
@@ -418,7 +418,7 @@ def forward_step(
         context_manager = torch.autocast("cuda", dtype=config.autocast_dtype)
     else:
         context_manager = contextlib.nullcontext()
-    with context_manager:
+    with context_manager, activation_stats.capture(config, current_microbatch, model.training):
         if checkpoint_activations_microbatch is None:
             output_tensor, loss_func = forward_step_func(data_iterator, model)
         else:

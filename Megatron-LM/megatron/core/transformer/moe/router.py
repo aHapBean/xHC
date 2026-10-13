@@ -217,6 +217,12 @@ class TopKRouter(Router):
             if self.expert_bias.dtype != torch.float32:
                 self.expert_bias.data = self.expert_bias.data.to(torch.float32)
 
+        # Float16Module converts non-persistent buffers too. Restoring only the bias
+        # leaves its token counter in BF16, quantizing counts and the update direction.
+        if self.config.moe_router_fp32_token_counts and self.enable_expert_bias:
+            if self.local_tokens_per_expert.dtype != torch.float32:
+                self.local_tokens_per_expert.data = self.local_tokens_per_expert.data.float()
+
     def sinkhorn_load_balancing(self, logits: torch.Tensor):
         """Apply sinkhorn routing to the logits tensor.
 

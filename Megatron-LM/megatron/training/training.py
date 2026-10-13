@@ -1700,6 +1700,9 @@ def train_step(forward_step_func, data_iterator, model, optimizer, opt_param_sch
     # Update parameters.
 
     timers('optimizer', log_level=1).start(barrier=args.barrier_with_L1_time)
+    scheduler_increment = get_num_microbatches() * args.micro_batch_size * args.data_parallel_size
+    if args.lr_step_before_optimizer:
+        opt_param_scheduler.step(increment=scheduler_increment)
     update_successful, grad_norm, num_zeros_in_grad = optimizer.step()
 
     # get max attention logit for logging and run clip_qk()
@@ -1727,9 +1730,12 @@ def train_step(forward_step_func, data_iterator, model, optimizer, opt_param_sch
     # Update learning rate.
     if update_successful:
         increment = get_num_microbatches() * args.micro_batch_size * args.data_parallel_size
-        opt_param_scheduler.step(increment=increment)
+        if not args.lr_step_before_optimizer:
+            opt_param_scheduler.step(increment=increment)
         skipped_iter = 0
     else:
+        if args.lr_step_before_optimizer:
+            opt_param_scheduler.step(increment=-scheduler_increment)
         skipped_iter = 1
 
     # Empty unused memory.
@@ -1792,6 +1798,14 @@ def training_log(
     wandb_writer = get_wandb_writer()
     one_logger = get_one_logger()
     energy_monitor = get_energy_monitor()
+
+    log_to_stdout = iteration % args.log_interval == 0 or is_first_iteration
+    activation_values = None
+    if args.log_activation_stats:
+        from megatron.core.activation_stats import write_step
+        activation_values = write_step(
+            writer, iteration, return_values=log_to_stdout and is_last_rank()
+        )
 
     # On first iteration, log stats but don't reset accumulators so normal interval stats remain accurate.
     should_reset = not is_first_iteration
@@ -2005,7 +2019,7 @@ def training_log(
         )
 
     # Dump memory snapshot and print metrics to stdout.
-    if iteration % args.log_interval == 0 or is_first_iteration:
+    if log_to_stdout:
         if args.record_memory_history and (is_last_rank() or torch.distributed.get_backend() == 'fake'):
             snapshot = torch.cuda.memory._snapshot()
             from pickle import dump
@@ -2086,6 +2100,9 @@ def training_log(
             total_loss_dict[skipped_iters_key] = 0
             total_loss_dict[nan_iters_key] = 0
         print_rank_last(log_string)
+        if activation_values:
+            fields = ' | '.join(f'{name}: {value:.6E}' for name, value in activation_values.items())
+            print_rank_last(f' activation statistics | iteration {iteration} | {fields} |')
         reported_memory_in_this_iteration = False
         if report_memory_flag:
             # Report memory after optimizer state has been initialized.
@@ -2181,7 +2198,8 @@ def save_checkpoint_and_time(
 
     # Stop timer to get accurate train interval time and exclude checkpointing duration
     timers('interval-time').stop()
-    energy_monitor.pause()
+    if args.log_energy:
+        energy_monitor.pause()
 
     # Extra barrier is added to make sure all ranks report the max time.
     timer_key = 'save-checkpoint-non-persistent' if non_persistent_ckpt else 'save-checkpoint'
@@ -2234,7 +2252,8 @@ def save_checkpoint_and_time(
         )
 
     # Recover timing
-    energy_monitor.resume()
+    if args.log_energy:
+        energy_monitor.resume()
     timers('interval-time', log_level=0).start(barrier=True)
 
 

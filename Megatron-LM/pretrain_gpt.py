@@ -129,6 +129,18 @@ def loss_func(
         num_tokens = loss_mask.sum().clone().detach().to(torch.int)
         report = {'lm loss': torch.cat([loss.clone().detach().view(1), num_tokens.view(1)])}
 
+    if args.global_token_mean_loss and model is not None and model.training:
+        from megatron.core.num_microbatches_calculator import get_num_microbatches
+        from megatron.training.global_token_loss import rescale_ce_for_global_tokens
+        if (args.tensor_model_parallel_size, args.pipeline_model_parallel_size,
+                args.context_parallel_size) != (1, 1, 1) or args.calculate_per_token_loss:
+            raise ValueError("global-token-mean-loss requires TP=PP=CP=1 and calculate_per_token_loss=False")
+        if getattr(args, 'modelopt_enabled', False) or args.mtp_num_layers:
+            raise ValueError("global-token-mean-loss does not support ModelOpt or MTP")
+        loss = rescale_ce_for_global_tokens(
+            loss, num_tokens, parallel_state.get_data_parallel_group(), get_num_microbatches()
+        )
+
     # Check individual rank losses are not NaN prior to DP all-reduce.
     rerun_state_machine = get_rerun_state_machine()
     if args.check_for_nan_in_loss_and_grad:

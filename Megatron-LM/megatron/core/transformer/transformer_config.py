@@ -42,6 +42,18 @@ class TransformerConfig(ModelParallelConfig):
     # model architecture
     ####################
 
+    hyper_connection: str = "baseline"
+    """Residual connection kind: baseline, mhc, or standard xhc."""
+
+    hyper_connection_backend: str = "reference"
+    """HC execution: reference or fused_xhc (BF16 full dense-read xHC)."""
+
+    hyper_connection_seed: int = 1234
+    """Independent CPU initialization seed for hyper-connection parameters."""
+
+    hyper_connection_settings: Optional[str] = None
+    """JSON object overriding connection settings; contains no backbone parameters."""
+
     num_layers: int = field(default=0, metadata={"argparse_meta": {"default": None}})
     """Number of transformer layers in a transformer block."""
 
@@ -220,6 +232,9 @@ class TransformerConfig(ModelParallelConfig):
     qk_clip_threshold: float = 100
     """The balancing threshold for qk-clip. eta = min(threshold / max_attention_logits, 1.0)"""
 
+    log_activation_stats: bool = False
+    """Log cross-layer activation mean/std/max from microbatch 0's original forward."""
+
     log_max_attention_logit: bool = False
     """Whether to log the max attention logit across whole model. Decoupled from qk_clip,
     defualts to False. Setting qk_clip will automatically log the max logit"""
@@ -307,6 +322,9 @@ class TransformerConfig(ModelParallelConfig):
     """Method to initialize weights of the output layer of both attention and MLP blocks. If None,
     will be set to megatron.core.utils.scaled_init_method_normal(init_method_std) which is torch nn
     init normal with mean=0.0 and std=init_method_std / math.sqrt(2.0 * num_layers)."""
+
+    disable_scaled_init_method: bool = False
+    """Use the same initialization std for output projections as other weights."""
 
     init_method_std: float = 0.02
     """Standard deviation of the zero mean normal for the default initialization method, not used if
@@ -636,6 +654,12 @@ class TransformerConfig(ModelParallelConfig):
     The routing decision is based on the sum of the routing scores and the expert bias.
     See https://arxiv.org/abs/2408.15664 for details."""
 
+    moe_router_fp32_token_counts: bool = False
+    """Keep expert-bias token counters in FP32 after BF16/FP16 model conversion.
+    False preserves existing experiment behavior; enable for integer-accurate token
+    accumulation and FP32 expert-bias update arithmetic.
+    """
+
     moe_router_bias_update_rate: float = 1e-3
     """The expert bias is updated based on the number of assigned tokens to each expert
     in a global batch, where the bias is increased for the experts with less assigned tokens
@@ -708,6 +732,12 @@ class TransformerConfig(ModelParallelConfig):
     moe_permute_fusion: bool = False
     """Fuse token rearrangement ops during token dispatching."""
 
+    moe_chunk_sort_fusion: bool = True
+    """Allow fused expert chunk sorting when moe_permute_fusion is enabled.
+    Disable independently to use PyTorch chunk sorting while retaining fused
+    token permutation/unpermutation on runtimes with faulty chunk-sort kernels.
+    """
+
     moe_router_fusion: bool = False
     """Enable fusion for MoE TopK routing and aux-loss computation. This is only
     supported in TransformerEngine 2.7.0 and above.
@@ -725,6 +755,11 @@ class TransformerConfig(ModelParallelConfig):
     moe_hybridep_num_sms: int = 16
     """Number of SMs to use for HybridEP. In pure NVL scenarios,
     16 SMs can generally achieve good bandwidth."""
+
+    moe_hybridep_pad_multiple: Optional[int] = None
+    """Pad expert token counts to this multiple in non-quantized HybridEP dispatch.
+    Quantized modes use their quantization alignment instead. None disables padding.
+    """
 
     ##################
     # Context Parallel
@@ -907,6 +942,8 @@ class TransformerConfig(ModelParallelConfig):
     """The minimum size of the tensor to be offloaded."""
 
     def __post_init__(self):
+        if self.hyper_connection not in ('baseline', 'mhc', 'xhc'):
+            raise ValueError('hyper_connection must be baseline, mhc, or xhc')
         """Python dataclass method that is used to modify attributes after initialization.
         See https://docs.python.org/3/library/dataclasses.html#post-init-processing for more
         details.
@@ -1059,6 +1096,9 @@ class TransformerConfig(ModelParallelConfig):
             assert (
                 self.moe_ffn_hidden_size is None
             ), "moe_ffn_hidden_size must be None when num_experts is not set."
+
+        if self.moe_hybridep_pad_multiple is not None and self.moe_hybridep_pad_multiple <= 0:
+            raise ValueError("moe_hybridep_pad_multiple must be positive or None.")
 
         if self.moe_enable_deepep:
             if self.moe_token_dispatcher_type != "flex":
@@ -1578,6 +1618,8 @@ class TransformerConfig(ModelParallelConfig):
         if self.init_method is None:
             self.init_method = init_method_normal(self.init_method_std)
 
+        if self.output_layer_init_method is None and self.disable_scaled_init_method:
+            self.output_layer_init_method = init_method_normal(self.init_method_std)
         if self.output_layer_init_method is None:
             self.output_layer_init_method = scaled_init_method_normal(
                 self.init_method_std,
@@ -1843,8 +1885,8 @@ class TransformerConfig(ModelParallelConfig):
             if (
                 fused_permute is None
                 or fused_permute_with_probs is None
-                or fused_sort_chunks_by_index is None
-                or fused_sort_chunks_by_index_with_probs is None
+                or (self.moe_chunk_sort_fusion and fused_sort_chunks_by_index is None)
+                or (self.moe_chunk_sort_fusion and fused_sort_chunks_by_index_with_probs is None)
                 or fused_unpermute is None
             ):
                 raise ValueError("fused permutation is not available. Please install TE >= 2.1.0.")
