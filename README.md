@@ -128,6 +128,68 @@ Our implementation uses fused forward and backward kernels to reduce intermediat
 
 </details>
 
+## Training
+
+Training code is in `Megatron-LM/`, configurations in `configs/`, and launch scripts
+in `scripts/`. The release includes baseline, mHC, xHC, and efficient full xHC.
+xHC-Flash is not included.
+
+### 1. Prepare the environment
+
+```bash
+docker build -t xhc:latest .
+docker run --rm -it --gpus all --network host --ipc host \
+  -v "$PWD:/workspace" \
+  -v /path/to/data:/data:ro \
+  -v /path/to/tokenizer:/tokenizer:ro \
+  -w /workspace xhc:latest bash
+```
+
+The default Docker build targets Blackwell GPUs. For Hopper, build with
+`--build-arg TORCH_CUDA_ARCH_LIST=9.0 --build-arg NVTE_CUDA_ARCHS=90`.
+
+### 2. Set the data paths
+
+Inside the container:
+
+```bash
+cp configs/runtime.env.example configs/runtime.env
+cp configs/data_mixture.json.example configs/data_mixture.json
+```
+
+Set the indexed `.bin`/`.idx` dataset prefixes in `configs/data_mixture.json`.
+In `configs/runtime.env`, set `DATA_ARGS=/workspace/configs/data_mixture.json`
+and `TOKENIZER_DIR=/tokenizer`. Preprocess the data with the same tokenizer used
+for training. Data and tokenizer files are supplied separately.
+
+### 3. Launch training
+
+Choose one script from `scripts/`:
+
+| Model | baseline | mHC | xHC | efficient xHC |
+| --- | --- | --- | --- | --- |
+| 2.5B | `train_2.5B_baseline.sh` | `train_2.5B_mHC.sh` | `train_2.5B_xHC.sh` | `train_2.5B_xHC_efficient.sh` |
+| 10B | `train_10B_baseline.sh` | `train_10B_mHC.sh` | `train_10B_xHC.sh` | `train_10B_xHC_efficient.sh` |
+| 18B | `train_18B_baseline.sh` | `train_18B_mHC.sh` | `train_18B_xHC.sh` | `train_18B_xHC_efficient.sh` |
+
+```bash
+bash scripts/train_10B_xHC_efficient.sh
+```
+
+For 32-GPU training, run the same command on each of eight allocated 4-GPU nodes:
+
+```bash
+export NNODES=8 GPUS=4 NODE_RANK=0  # Set NODE_RANK=0..7 on the respective nodes.
+export MASTER_ADDR=192.0.2.10 MASTER_PORT=29500  # Replace with node 0's IP.
+export EXP_NAME=10B_xHC_efficient
+bash scripts/train_10B_xHC_efficient.sh
+```
+
+Checkpoints are saved every 500 steps under `experiments/<EXP_NAME>/checkpoints/`;
+TensorBoard logs are in `experiments/tensorboard/<EXP_NAME>/`. The same command
+resumes the experiment. Use a separate experiment name for each concurrent run.
+
+
 ## Citation
 
 ```bibtex

@@ -1,0 +1,18 @@
+.git
+**/__pycache__
+**/*.pyc
+**/*.so
+experiments
+assets
+paper
+.venv
+**/*.egg-info
+**/build
+**/dist
+**/*.log
+
+# Local machine configuration and crash dumps must not enter release images.
+configs/runtime.env
+configs/data_mixture.json
+Megatron-LM/core
+**/core.[0-9]*

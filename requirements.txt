@@ -1,0 +1,15 @@
+# Install CUDA-enabled PyTorch and Transformer Engine for your CUDA environment first.
+numpy
+packaging>=24.2
+PyYAML>=6
+pybind11>=2.13
+tensorboard>=2.16
+transformers>=4.40
+sentencepiece
+tiktoken
+einops>=0.8
+psutil
+tensorstore>=0.1.71
+nvidia-ml-py
+nvtx
+six>=1.16
