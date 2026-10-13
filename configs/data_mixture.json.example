@@ -1,0 +1,5 @@
+{
+  "train": ["1.0", "TODO_TRAIN_DATASET_PREFIX"],
+  "valid": ["1.0", "TODO_VALID_DATASET_PREFIX"],
+  "test": ["1.0", "TODO_TEST_DATASET_PREFIX"]
+}

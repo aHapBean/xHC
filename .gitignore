@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+build/
+dist/
+.venv/
+experiments/
+*.log
+
+# Local data/runtime settings; distribute only the .example templates.
+configs/runtime.env
+configs/data_mixture.json
+
+# Runtime crash dumps (not the megatron/core source directory).
+/Megatron-LM/core
+core.[0-9]*
