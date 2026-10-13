@@ -209,6 +209,8 @@ Checkpoints are saved every 500 steps under `experiments/<EXP_NAME>/checkpoints/
 TensorBoard logs are in `experiments/tensorboard/<EXP_NAME>/`. The same command
 resumes the experiment. Use a separate experiment name for each concurrent run.
 
+The efficient xHC implementation improves training efficiency but does not represent the highest achievable efficiency; there is room for further optimization.
+
 
 ## Citation
 
