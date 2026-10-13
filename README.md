@@ -24,6 +24,7 @@ xHC expands the residual state to N=16 streams, reads all streams, and sparsely 
 
 ## News
 
+- **2026.10** We released the [training code](#training), reimplemented using [Megatron-LM](https://github.com/NVIDIA/Megatron-LM).
 - **2026.09** 🎉 xHC has been accepted to **NeurIPS 2026**!
 - **2026.07** We released the [xHC technical report](https://arxiv.org/abs/2607.14530) on arXiv.
 
