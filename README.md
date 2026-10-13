@@ -232,3 +232,8 @@ The efficient xHC implementation improves training efficiency but does not repre
 ## Contact
 
 For questions about the paper, please contact `zhangxiangdong@sjtu.edu.cn`.
+
+## License
+
+Our contributions are licensed under [Apache 2.0](LICENSE). Third-party code retains
+its original licenses; see [Megatron-LM/LICENSE](Megatron-LM/LICENSE) and individual file notices.
