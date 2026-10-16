@@ -24,9 +24,19 @@ xHC expands the residual state to N=16 streams, reads all streams, and sparsely 
 
 ## News
 
-- **2026.10** We released the [training code](#training), reimplemented using [Megatron-LM](https://github.com/NVIDIA/Megatron-LM), along with efficient Triton kernels for xHC to support further community research.
+- **2026.10** We released the [training code](#training), reimplemented using [Megatron-LM](https://github.com/NVIDIA/Megatron-LM), along with efficient Triton kernels for xHC to support further community research. See the [training curves](#training-reproduction).
 - **2026.09** 🎉 xHC has been accepted to **NeurIPS 2026**!
 - **2026.07** We released the [xHC technical report](https://arxiv.org/abs/2607.14530) on arXiv.
+
+## Training Reproduction
+
+Using the xHC implementation provided here, we observe lower training loss than baseline and mHC for an **18B MoE on private data**. We also reproduce these gains for a **2.5B MoE on public Dolma3 data**.
+
+<p align="center">
+  <img src="assets/training_reproduction.png" width="100%" alt="Training LM loss for baseline, mHC and efficient xHC on 18B private-data and 2.5B Dolma3 experiments">
+</p>
+
+These runs use full experimental schedules; xHC denotes the efficient backend. Curves show lightly EMA-smoothed loss over faint raw values, using the same 50-step EMA span for all methods and both model sizes. The view covers 10%–100% of training with cropped y-axes; no outlier filtering is applied.
 
 ## Overview
 
