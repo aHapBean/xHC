@@ -24,7 +24,7 @@ xHC expands the residual state to N=16 streams, reads all streams, and sparsely 
 
 ## News
 
-- **2026.10** We released the [training code](#training), reimplemented using [Megatron-LM](https://github.com/NVIDIA/Megatron-LM).
+- **2026.10** We released the [training code](#training), reimplemented using [Megatron-LM](https://github.com/NVIDIA/Megatron-LM), along with efficient Triton kernels for xHC to support further community research.
 - **2026.09** 🎉 xHC has been accepted to **NeurIPS 2026**!
 - **2026.07** We released the [xHC technical report](https://arxiv.org/abs/2607.14530) on arXiv.
 
@@ -133,6 +133,7 @@ Our implementation uses fused forward and backward kernels to reduce intermediat
 
 Training code is in `Megatron-LM/`, configurations in `configs/`, and launch scripts
 in `scripts/`. The release includes baseline, mHC, xHC, and efficient full xHC.
+The efficient xHC backend uses custom Triton kernels to fuse connection operations in the forward and backward passes.
 xHC-Flash is not included.
 
 ### 1. Prepare the environment
