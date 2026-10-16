@@ -30,7 +30,7 @@ xHC expands the residual state to N=16 streams, reads all streams, and sparsely 
 
 ## Training Reproduction
 
-Using the xHC implementation provided here, we observe lower training loss than baseline and mHC for an **18B MoE on private data**. We also reproduce these gains for a **2.5B MoE on public Dolma3 data**.
+Using the training code provided here, we observe lower training loss than baseline and mHC for an **18B MoE on private data**. We also reproduce these gains for a **2.5B MoE on public Dolma3 data**.
 
 <p align="center">
   <img src="assets/training_reproduction.png" width="100%" alt="Training LM loss for baseline, mHC and efficient xHC on 18B private-data and 2.5B Dolma3 experiments">
