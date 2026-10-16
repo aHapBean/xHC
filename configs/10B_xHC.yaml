@@ -1,3 +1,5 @@
+# Reference recipe; the training budget may differ from those used in the paper,
+# as the token budgets are not disclosed in the paper.
 description: '10B xHC: paper architecture with native Megatron training.'
 variant: xhc
 execution:
@@ -76,13 +78,13 @@ arguments:
   recompute-num-layers: '1'
   micro-batch-size: $MBS
   global-batch-size: '288'
-  train-iters: '20472'
+  train-iters: '1000'
   lr: '0.000482'
   min-lr: '4.82e-05'
-  lr-warmup-iters: '500'
-  lr-decay-iters: '20472'
+  lr-warmup-iters: '100'
+  lr-decay-iters: '1000'
   lr-decay-style: WSD
-  lr-wsd-decay-iters: '4095'
+  lr-wsd-decay-iters: '200'
   lr-wsd-decay-style: geometric
   weight-decay: '0.1'
   adam-beta1: '0.9'

@@ -1,3 +1,5 @@
+# Reference recipe; the training budget may differ from those used in the paper,
+# as the token budgets are not disclosed in the paper.
 description: '18B mHC: paper architecture with native Megatron training.'
 variant: mhc
 execution:
@@ -70,13 +72,13 @@ arguments:
   recompute-num-layers: '1'
   micro-batch-size: $MBS
   global-batch-size: '512'
-  train-iters: '46000'
+  train-iters: '1000'
   lr: '0.000397'
   min-lr: '0.0000397'
-  lr-warmup-iters: '500'
-  lr-decay-iters: '46000'
+  lr-warmup-iters: '100'
+  lr-decay-iters: '1000'
   lr-decay-style: WSD
-  lr-wsd-decay-iters: '9200'
+  lr-wsd-decay-iters: '200'
   lr-wsd-decay-style: geometric
   weight-decay: '0.1'
   adam-beta1: '0.9'

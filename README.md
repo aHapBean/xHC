@@ -135,6 +135,14 @@ Training code is in `Megatron-LM/`, configurations in `configs/`, and launch scr
 in `scripts/`. The release includes baseline, mHC, xHC, and efficient full xHC.
 The efficient xHC backend uses custom Triton kernels to fuse connection operations in the forward and backward passes.
 xHC-Flash is not included.
+The supplied recipes use a reference 1,000-step training budget, which may differ from those used in the paper, as the token budgets are not disclosed in the paper.
+Adjust the training length and learning-rate schedule for your experiments.
+
+Implementation: [mHC/xHC](Megatron-LM/megatron/core/transformer/hyper_connections.py),
+[Transformer layer integration](Megatron-LM/megatron/core/transformer/hyper_connection_layer.py),
+and [efficient backend](Megatron-LM/megatron/core/fusions/fused_xhc.py).
+Triton kernels: [fused xHC operations](Megatron-LM/megatron/core/fusions/fused_xhc_kernels.py)
+and [Gram–Schmidt](Megatron-LM/megatron/core/fusions/fused_xhc_gs.py).
 
 ### 1. Prepare the environment
 
@@ -210,6 +218,7 @@ Adjust expert parallelism and communication to suit your hardware by setting
 `EP` and `MOE_DISPATCHER` before launching, for example
 `export EP=4 MOE_DISPATCHER=hybridep`. Supported backends are `alltoall`, `hybridep`,
 and `deepep`; the latter two require their corresponding dependencies.
+If GPU memory is insufficient, reduce the micro-batch size with `export MBS=1`.
 
 Checkpoints are saved every 500 steps under `experiments/<EXP_NAME>/checkpoints/`;
 TensorBoard logs are in `experiments/tensorboard/<EXP_NAME>/`. The same command
