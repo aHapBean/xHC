@@ -206,6 +206,11 @@ export EXP_NAME=10B_xHC_efficient
 bash scripts/train_10B_xHC_efficient.sh
 ```
 
+Adjust expert parallelism and communication to suit your hardware by setting
+`EP` and `MOE_DISPATCHER` before launching, for example
+`export EP=4 MOE_DISPATCHER=hybridep`. Supported backends are `alltoall`, `hybridep`,
+and `deepep`; the latter two require their corresponding dependencies.
+
 Checkpoints are saved every 500 steps under `experiments/<EXP_NAME>/checkpoints/`;
 TensorBoard logs are in `experiments/tensorboard/<EXP_NAME>/`. The same command
 resumes the experiment. Use a separate experiment name for each concurrent run.
